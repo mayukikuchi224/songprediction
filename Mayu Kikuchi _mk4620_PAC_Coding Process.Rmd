@@ -1,0 +1,659 @@
+---
+title: "mk4620_Mayu Kikuchi_PAC Process"
+author: "Mayu"
+date: "2022-11-22"
+output: html_document
+---
+<Codes for the best score: Submission 35>
+(Though "Submission 12" was chosen as a private score, since "Submission 35" was my best score, I wrote up about "Submission 35" as the best one)
+
+Set directory and read data.
+```{R}
+setwd('C:/Users/mayuk/OneDrive/デスクトップ/2022 Fall/5200 Lala/Predictive Analysis Competition')
+
+songs = read.csv('analysisData.csv')
+scoringData = read.csv('scoringData.csv')
+```
+
+Check data structure and variables.
+There are multiple genres in one cell with unnecessary characters such as single quotation, brackets, and back slash. Hence we need to clean genre column data to make it useful data for prediction.
+```{R}
+library(dplyr)
+str(songs)
+str(scoringData)
+
+head(songs)
+head(scoringData)
+```
+Count the number of row.
+```{R}
+nrow(songs)
+nrow(scoringData)
+```
+Check missing data by column.
+There is 108 NA data in genre column, and there were no NA data for other columns.
+```{R}
+apply(songs,
+      MARGIN = 2, 
+      FUN = function(x) sum(is.na(x)))
+```
+
+Confirm each variables' distribution and mean.
+```{R}
+summary(songs)
+summary(scoringData)
+```
+
+Create scatter plot graphs between rating and each numeric variable.
+It seems there is no strong relationship with any variables.
+```{R}
+library(ggplot2)
+ggplot(data = songs, aes(x = track_duration, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = danceability, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = energy, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = key, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = loudness, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = speechiness, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = acousticness, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = instrumentalness, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = liveness, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = valence, y = rating))+
+  geom_point()
+
+ggplot(data = songs, aes(x = tempo, y = rating))+
+  geom_point()
+```
+Create a list of genres by dividing into each genre name and delete unnecessary characters.
+First, separate genre column by comma and list up in one column.
+```{R}
+library(tidyr)
+library(readr)
+genre = songs %>%
+  select(genre) %>%
+  separate(col = genre, c("1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"), sep =",") %>%
+  pivot_longer(cols = 1:15,names_to = "id", values_to = "genre") %>%
+  select(genre)
+head(genre)
+nrow(genre)
+```
+
+Delete blank rows.
+```{R}
+genre2 = na.omit(genre)
+head(genre2)
+```
+
+Delete other than alphabet from data.
+```{R}
+library(stringr)
+genre3 = gsub("[^A-Za-z0-9]", "", genre2$genre)
+head(genre3)
+```
+
+Check the number of observations for each genre. Mellowgold, softrock and adultstandards were top 3 major genres.
+```{R}
+print(sort(table(genre3),decreasing = TRUE))
+```
+
+Check the number of songs by performer.
+```{R}
+songs %>%
+  group_by(performer)%>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+```
+
+Add dummy variable to songs data(analysis Data) for genre that has many observations and performer that has many songs or popular in Spotify (some of the singers within Top50).
+After that procedure, delete id,performer,song,genre column.
+```{R}
+library(base)
+songs3 =songs %>% 
+  mutate(pop=grepl(pattern="pop",genre))%>% 
+  mutate(rock=grepl(pattern="rock",genre))%>%
+  mutate(rap=grepl(pattern="rap",genre))%>%
+  mutate(dance=grepl(pattern="dance",genre))%>%
+  mutate(country=grepl(pattern="country",genre))%>%
+  mutate(classic=grepl(pattern="classic",genre))%>%
+  mutate(kpop=grepl(pattern="k-pop",genre))%>%
+  mutate(hip=grepl(pattern="hip hop",genre))%>%
+  mutate(rb=grepl(pattern="r&b",genre))%>%
+  mutate(latin=grepl(pattern="latin",genre))%>%
+  mutate(disco=grepl(pattern="disco",genre))%>%
+  mutate(mellow=grepl(pattern="mellow",genre))%>%
+  mutate(funk=grepl(pattern="funk",genre))%>%
+  mutate(mellow=grepl(pattern="teen",genre))%>%
+  mutate(trap=grepl(pattern="trap",genre))%>%
+  mutate(folkrock=grepl(pattern="folk rock",genre))%>%
+  mutate(alternative=grepl(pattern="alternative",genre))%>%
+  mutate(blues=grepl(pattern="blues",genre))%>%
+  mutate(soul=grepl(pattern="soul",genre))%>%
+  mutate(jazz=grepl(pattern="jazz",genre))%>%
+  mutate(motown=grepl(pattern="motown",genre))%>%
+  mutate(beach=grepl(pattern="beach",genre))%>%
+  mutate(urban=grepl(pattern="urban",genre))%>%
+  mutate(canadian=grepl(pattern="canadian",genre))%>%
+  mutate(deep=grepl(pattern="deep",genre))%>%
+  mutate(newromantic=grepl(pattern="new romantic",genre))%>%
+  mutate(soft=grepl(pattern="soft rock",genre))%>%
+  mutate(glee=grepl(pattern="glee club",genre))%>%
+  mutate(doo=grepl(pattern="doo-wop",genre))%>%
+  mutate(classicuk=grepl(pattern="classic uk pop",genre))%>%
+  mutate(poprap=grepl(pattern="pop rap",genre))%>%
+  mutate(adultstandard=grepl(pattern="adult standards",genre))%>%
+  mutate(brill=grepl(pattern="brill building pop",genre))%>%
+  mutate(moderncountry=grepl(pattern="modern country rock",genre))%>%
+  mutate(jazzblues=grepl(pattern="jazz blues",genre))%>%
+  mutate(bubblegum=grepl(pattern="bubblegum pop",genre))%>%
+  mutate(dancepop=grepl(pattern="dance pop",genre))%>%
+  mutate(melodicrap=grepl(pattern="melodic rap",genre))%>%
+  mutate(boyband=grepl(pattern="boy band",genre))%>%
+  mutate(girlgroup=grepl(pattern="girl group",genre))%>%
+  mutate(acousticpop=grepl(pattern="acoustic pop",genre))%>%
+  mutate(rockandroll=grepl(pattern="rock-and-roll",genre))%>%
+  mutate(boyband=grepl(pattern="boy band",genre))%>%
+  mutate(electropop=grepl(pattern="electropop",genre))%>%
+  mutate(freestyle=grepl(pattern="freestyle",genre))%>%
+  mutate(childrensmusic=grepl(pattern="childrens",genre))%>%
+  mutate(idol=grepl(pattern="idol",genre))%>%
+  mutate(detroithiphop=grepl(pattern="detroit hip hop",genre))%>%
+  mutate(motown=grepl(pattern="motown",genre))%>%
+  mutate(classicgirlgroup=grepl(pattern="classic girl group",genre))%>%
+  mutate(grime=grepl(pattern="grime",genre))%>%
+  mutate(edm=grepl(pattern="edm",genre))%>%
+  mutate(lounge=grepl(pattern="lounge",genre))%>%
+  mutate(christmas=grepl(pattern="christmas",genre))%>%
+  mutate(disney=grepl(pattern="disney",genre))%>%
+  mutate(reggae=grepl(pattern="reggae",genre))%>%
+  mutate(hollywood=grepl(pattern="hollywood",genre))%>%
+  mutate(gospel=grepl(pattern="gospel",genre))%>%
+  mutate(hollywood=grepl(pattern="hollywood",genre))%>%
+  mutate(art=grepl(pattern="art",genre))%>%
+  mutate(british=grepl(pattern="british",genre))%>%
+  mutate(piano=grepl(pattern="piano",genre))%>%
+  mutate(vocalharmony=grepl(pattern="vocal harmony",genre))%>%
+  mutate(europop=grepl(pattern="europop",genre))%>%
+  mutate(comedy=grepl(pattern="comedy",genre))%>%
+  mutate(eurodance=grepl(pattern="eurodance",genre))%>%
+  mutate(postteen=grepl(pattern="post-teen",genre))%>%
+  mutate(indie=grepl(pattern="indie",genre))%>%
+  mutate(emo=grepl(pattern="emo",genre))%>%
+  mutate(easylistening=grepl(pattern="easy listening",genre))%>%
+  mutate(swedish=grepl(pattern="swedish",genre))%>%
+  mutate(gangster=grepl(pattern="gangster",genre))%>%
+  mutate(neo=grepl(pattern="neo",genre))%>%
+  mutate(protopunk=grepl(pattern="protopunk",genre))%>%
+  mutate(mellowgold=grepl(pattern="mellow gold",genre))%>%
+  mutate(softrock=grepl(pattern="soft rock",genre))%>%
+  mutate(adultstandards=grepl(pattern="adult standards",genre))%>%
+  mutate(brillbuildingpop=grepl(pattern="brill building pop",genre))%>%
+  mutate(classicrock=grepl(pattern="classic rock",genre))%>%
+  mutate(folkrock=grepl(pattern="folk rock",genre))%>%
+  mutate(albumrock=grepl(pattern="album rock",genre))%>%
+  mutate(urbancontemporary=grepl(pattern="urban contemporary",genre))%>%
+  mutate(newwavepop=grepl(pattern="new wave pop",genre))%>%
+  mutate(trap=grepl(pattern="trap",genre))%>%
+  mutate(southernsoul=grepl(pattern="southern soul",genre))%>%
+  mutate(rhythmblues=grepl(pattern="rhythm and blues",genre))%>%
+  mutate(newjackswing=grepl(pattern="new jack swing",genre))%>%
+  mutate(singersongwriter=grepl(pattern="singer-songwriter",genre))%>%
+  mutate(permanentwave=grepl(pattern="permanent wave",genre))%>%
+  mutate(heartlandrock=grepl(pattern="heartland rock",genre))%>%
+  mutate(moderncountry=grepl(pattern="modern country rock",genre))%>%
+  mutate(yachtrock=grepl(pattern="yacht rock",genre))%>%
+  mutate(postgrunge=grepl(pattern="post-grunge",genre))%>%
+  mutate(atlhiphop=grepl(pattern="atl hip hop",genre))%>%
+  mutate(vocaljazz=grepl(pattern="vocal jazz",genre))%>%
+  mutate(countrydawn=grepl(pattern="country dawn",genre))%>%
+  mutate(ariana=grepl(pattern = "Ariana Grande",performer))%>%
+  mutate(drake=grepl(pattern = "Drake",performer))%>%
+  mutate(billie=grepl(pattern = "Billie Eilish",performer))%>%
+  mutate(justin=grepl(pattern = "Justin Bieber",performer))%>%
+  mutate(eminem=grepl(pattern = "Eminem",performer))%>%
+  mutate(taylor=grepl(pattern = "Taylor Swift",performer))%>%
+  mutate(bts=grepl(pattern = "BTS",performer))%>%
+  mutate(rihanna=grepl(pattern = "Rihanna",performer))%>%
+  mutate(badbunny=grepl(pattern = "Bad Bunny",performer))%>%
+  mutate(adele=grepl(pattern = "Adele",performer))%>%
+  mutate(shawn=grepl(pattern = "Shawn Mendes",performer))%>%
+  mutate(post=grepl(pattern = "Post Malone",performer))%>%
+  mutate(ed=grepl(pattern = "Ed Sheeran",performer))%>%
+  mutate(dualipa=grepl(pattern = "Dua Lipa",performer))%>%
+  mutate(imagine=grepl(pattern = "Imagine Dragons",performer))%>%
+  mutate(ozuna=grepl(pattern = "Ozuna",performer))%>%
+  mutate(khalid=grepl(pattern = "Khalid",performer))%>%
+  mutate(travis=grepl(pattern = "Travis Scott",performer))%>%
+  mutate(david=grepl(pattern = "David Guetta",performer))%>%
+  mutate(bruno=grepl(pattern = "Bruno Mars",performer))%>%
+  mutate(daddy=grepl(pattern = "Daddy Yankee",performer))%>%
+  mutate(calvin=grepl(pattern = "Calvin Harris",performer))%>%
+  mutate(Kendrick=grepl(pattern = "Kendrick Lamar",performer))%>%
+  mutate(beatles=grepl(pattern = "The Beatles",performer))%>%
+  mutate(aretha=grepl(pattern = "Aretha Franklin",performer))%>%
+  mutate(rolling=grepl(pattern = "The Rolling Stones",performer))%>%
+  mutate(Madonna=grepl(pattern = "Madonna",performer))%>%
+  mutate(Stevie=grepl(pattern = "Stevie Wonder",performer))%>%
+  mutate(temptation=grepl(pattern = "The Temptations",performer))%>%
+  mutate(timmc=grepl(pattern = "Tim McGraw",performer))%>%
+  mutate(Glee=grepl(pattern = "Glee Cast",performer))%>%
+  mutate(Elton=grepl(pattern = "Elton John",performer))%>%
+  mutate(Michael=grepl(pattern = "Michael Jackson",performer))%>%
+  mutate(Bee=grepl(pattern = "Bee Gees",performer))%>%
+  mutate(Bobby=grepl(pattern = "Bobby Bland",performer))%>%
+  mutate(Rod=grepl(pattern = "Rod Stewart",performer))%>%
+  mutate(Four=grepl(pattern = "Four Tops",performer))%>%
+  mutate(beachboy=grepl(pattern = "Beach Boy",performer))%>%
+  mutate(Barbra=grepl(pattern = "Barbra Streisand",performer))%>%
+  mutate(Future=grepl(pattern = "Future",performer))%>%
+  mutate(Gladys=grepl(pattern = "Gladys Knight And The Pips",performer))%>%
+  mutate(Lil=grepl(pattern = "Lil Uzi Vert",performer))%>%
+  mutate(Neil=grepl(pattern = "Neil",performer))%>%
+  mutate(Cooke=grepl(pattern = "Sam Cooke",performer))%>%
+  mutate(Impressions=grepl(pattern = "Impressions",performer))%>%
+  mutate(Marvelettes=grepl(pattern = "Marvelettes",performer))%>%
+  select(-id,-performer,-song,-genre)
+```
+
+Do the same procedures on scoring data as well.
+```{R}
+scoringData3=scoringData %>% 
+  mutate(pop=grepl(pattern="pop",genre))%>% 
+  mutate(rock=grepl(pattern="rock",genre))%>%
+  mutate(rap=grepl(pattern="rap",genre))%>%
+  mutate(dance=grepl(pattern="dance",genre))%>%
+  mutate(country=grepl(pattern="country",genre))%>%
+  mutate(classic=grepl(pattern="classic",genre))%>%
+  mutate(kpop=grepl(pattern="k-pop",genre))%>%
+  mutate(hip=grepl(pattern="hip hop",genre))%>%
+  mutate(rb=grepl(pattern="r&b",genre))%>%
+  mutate(latin=grepl(pattern="latin",genre))%>%
+  mutate(disco=grepl(pattern="disco",genre))%>%
+  mutate(mellow=grepl(pattern="mellow",genre))%>%
+  mutate(funk=grepl(pattern="funk",genre))%>%
+  mutate(mellow=grepl(pattern="teen",genre))%>%
+  mutate(trap=grepl(pattern="trap",genre))%>%
+  mutate(folkrock=grepl(pattern="folk rock",genre))%>%
+  mutate(alternative=grepl(pattern="alternative",genre))%>%
+  mutate(blues=grepl(pattern="blues",genre))%>%
+  mutate(soul=grepl(pattern="soul",genre))%>%
+  mutate(jazz=grepl(pattern="jazz",genre))%>%
+  mutate(motown=grepl(pattern="motown",genre))%>%
+  mutate(beach=grepl(pattern="beach",genre))%>%
+  mutate(urban=grepl(pattern="urban",genre))%>%
+  mutate(canadian=grepl(pattern="canadian",genre))%>%
+  mutate(deep=grepl(pattern="deep",genre))%>%
+  mutate(newromantic=grepl(pattern="new romantic",genre))%>%
+  mutate(soft=grepl(pattern="soft rock",genre))%>%
+  mutate(glee=grepl(pattern="glee club",genre))%>%
+  mutate(doo=grepl(pattern="doo-wop",genre))%>%
+  mutate(classicuk=grepl(pattern="classic uk pop",genre))%>%
+  mutate(poprap=grepl(pattern="pop rap",genre))%>%
+  mutate(adultstandard=grepl(pattern="adult standards",genre))%>%
+  mutate(brill=grepl(pattern="brill building pop",genre))%>%
+  mutate(moderncountry=grepl(pattern="modern country rock",genre))%>%
+  mutate(jazzblues=grepl(pattern="jazz blues",genre))%>%
+  mutate(bubblegum=grepl(pattern="bubblegum pop",genre))%>%
+  mutate(dancepop=grepl(pattern="dance pop",genre))%>%
+  mutate(melodicrap=grepl(pattern="melodic rap",genre))%>%
+  mutate(boyband=grepl(pattern="boy band",genre))%>%
+  mutate(girlgroup=grepl(pattern="girl group",genre))%>%
+  mutate(acousticpop=grepl(pattern="acoustic pop",genre))%>%
+  mutate(rockandroll=grepl(pattern="rock-and-roll",genre))%>%
+  mutate(boyband=grepl(pattern="boy band",genre))%>%
+  mutate(electropop=grepl(pattern="electropop",genre))%>%
+  mutate(freestyle=grepl(pattern="freestyle",genre))%>%
+  mutate(childrensmusic=grepl(pattern="childrens",genre))%>%
+  mutate(idol=grepl(pattern="idol",genre))%>%
+  mutate(detroithiphop=grepl(pattern="detroit hip hop",genre))%>%
+  mutate(motown=grepl(pattern="motown",genre))%>%
+  mutate(classicgirlgroup=grepl(pattern="classic girl group",genre))%>%
+  mutate(grime=grepl(pattern="grime",genre))%>%
+  mutate(edm=grepl(pattern="edm",genre))%>%
+  mutate(lounge=grepl(pattern="lounge",genre))%>%
+  mutate(christmas=grepl(pattern="christmas",genre))%>%
+  mutate(disney=grepl(pattern="disney",genre))%>%
+  mutate(reggae=grepl(pattern="reggae",genre))%>%
+  mutate(hollywood=grepl(pattern="hollywood",genre))%>%
+  mutate(gospel=grepl(pattern="gospel",genre))%>%
+  mutate(hollywood=grepl(pattern="hollywood",genre))%>%
+  mutate(art=grepl(pattern="art",genre))%>%
+  mutate(british=grepl(pattern="british",genre))%>%
+  mutate(piano=grepl(pattern="piano",genre))%>%
+  mutate(vocalharmony=grepl(pattern="vocal harmony",genre))%>%
+  mutate(europop=grepl(pattern="europop",genre))%>%
+  mutate(comedy=grepl(pattern="comedy",genre))%>%
+  mutate(eurodance=grepl(pattern="eurodance",genre))%>%
+  mutate(postteen=grepl(pattern="post-teen",genre))%>%
+  mutate(indie=grepl(pattern="indie",genre))%>%
+  mutate(emo=grepl(pattern="emo",genre))%>%
+  mutate(easylistening=grepl(pattern="easy listening",genre))%>%
+  mutate(swedish=grepl(pattern="swedish",genre))%>%
+  mutate(gangster=grepl(pattern="gangster",genre))%>%
+  mutate(neo=grepl(pattern="neo",genre))%>%
+  mutate(protopunk=grepl(pattern="protopunk",genre))%>%
+  mutate(mellowgold=grepl(pattern="mellow gold",genre))%>%
+  mutate(softrock=grepl(pattern="soft rock",genre))%>%
+  mutate(adultstandards=grepl(pattern="adult standards",genre))%>%
+  mutate(brillbuildingpop=grepl(pattern="brill building pop",genre))%>%
+  mutate(classicrock=grepl(pattern="classic rock",genre))%>%
+  mutate(folkrock=grepl(pattern="folk rock",genre))%>%
+  mutate(albumrock=grepl(pattern="album rock",genre))%>%
+  mutate(urbancontemporary=grepl(pattern="urban contemporary",genre))%>%
+  mutate(newwavepop=grepl(pattern="new wave pop",genre))%>%
+  mutate(trap=grepl(pattern="trap",genre))%>%
+  mutate(southernsoul=grepl(pattern="southern soul",genre))%>%
+  mutate(rhythmblues=grepl(pattern="rhythm and blues",genre))%>%
+  mutate(newjackswing=grepl(pattern="new jack swing",genre))%>%
+  mutate(singersongwriter=grepl(pattern="singer-songwriter",genre))%>%
+  mutate(permanentwave=grepl(pattern="permanent wave",genre))%>%
+  mutate(heartlandrock=grepl(pattern="heartland rock",genre))%>%
+  mutate(moderncountry=grepl(pattern="modern country rock",genre))%>%
+  mutate(yachtrock=grepl(pattern="yacht rock",genre))%>%
+  mutate(postgrunge=grepl(pattern="post-grunge",genre))%>%
+  mutate(atlhiphop=grepl(pattern="atl hip hop",genre))%>%
+  mutate(vocaljazz=grepl(pattern="vocal jazz",genre))%>%
+  mutate(countrydawn=grepl(pattern="country dawn",genre))%>%
+  mutate(ariana=grepl(pattern = "Ariana Grande",performer))%>%
+  mutate(drake=grepl(pattern = "Drake",performer))%>%
+  mutate(billie=grepl(pattern = "Billie Eilish",performer))%>%
+  mutate(justin=grepl(pattern = "Justin Bieber",performer))%>%
+  mutate(eminem=grepl(pattern = "Eminem",performer))%>%
+  mutate(taylor=grepl(pattern = "Taylor Swift",performer))%>%
+  mutate(bts=grepl(pattern = "BTS",performer))%>%
+  mutate(rihanna=grepl(pattern = "Rihanna",performer))%>%
+  mutate(badbunny=grepl(pattern = "Bad Bunny",performer))%>%
+  mutate(adele=grepl(pattern = "Adele",performer))%>%
+  mutate(shawn=grepl(pattern = "Shawn Mendes",performer))%>%
+  mutate(post=grepl(pattern = "Post Malone",performer))%>%
+  mutate(ed=grepl(pattern = "Ed Sheeran",performer))%>%
+  mutate(dualipa=grepl(pattern = "Dua Lipa",performer))%>%
+  mutate(imagine=grepl(pattern = "Imagine Dragons",performer))%>%
+  mutate(ozuna=grepl(pattern = "Ozuna",performer))%>%
+  mutate(khalid=grepl(pattern = "Khalid",performer))%>%
+  mutate(travis=grepl(pattern = "Travis Scott",performer))%>%
+  mutate(david=grepl(pattern = "David Guetta",performer))%>%
+  mutate(bruno=grepl(pattern = "Bruno Mars",performer))%>%
+  mutate(daddy=grepl(pattern = "Daddy Yankee",performer))%>%
+  mutate(calvin=grepl(pattern = "Calvin Harris",performer))%>%
+  mutate(Kendrick=grepl(pattern = "Kendrick Lamar",performer))%>%
+  mutate(beatles=grepl(pattern = "The Beatles",performer))%>%
+  mutate(aretha=grepl(pattern = "Aretha Franklin",performer))%>%
+  mutate(rolling=grepl(pattern = "The Rolling Stones",performer))%>%
+  mutate(Madonna=grepl(pattern = "Madonna",performer))%>%
+  mutate(Stevie=grepl(pattern = "Stevie Wonder",performer))%>%
+  mutate(temptation=grepl(pattern = "The Temptations",performer))%>%
+  mutate(timmc=grepl(pattern = "Tim McGraw",performer))%>%
+  mutate(Glee=grepl(pattern = "Glee Cast",performer))%>%
+  mutate(Elton=grepl(pattern = "Elton John",performer))%>%
+  mutate(Michael=grepl(pattern = "Michael Jackson",performer))%>%
+  mutate(Bee=grepl(pattern = "Bee Gees",performer))%>%
+  mutate(Bobby=grepl(pattern = "Bobby Bland",performer))%>%
+  mutate(Rod=grepl(pattern = "Rod Stewart",performer))%>%
+  mutate(Four=grepl(pattern = "Four Tops",performer))%>%
+  mutate(beachboy=grepl(pattern = "Beach Boy",performer))%>%
+  mutate(Barbra=grepl(pattern = "Barbra Streisand",performer))%>%
+  mutate(Future=grepl(pattern = "Future",performer))%>%
+  mutate(Gladys=grepl(pattern = "Gladys Knight And The Pips",performer))%>%
+  mutate(Lil=grepl(pattern = "Lil Uzi Vert",performer))%>%
+  mutate(Neil=grepl(pattern = "Neil",performer))%>%
+  mutate(Cooke=grepl(pattern = "Sam Cooke",performer))%>%
+  mutate(Impressions=grepl(pattern = "Impressions",performer))%>%
+  mutate(Marvelettes=grepl(pattern = "Marvelettes",performer))%>%
+  select(-id,-performer,-song,-genre)
+```
+
+Split the data into train data and test data.
+```{R}
+library(caret)
+set.seed(1031)
+split = createDataPartition(y = songs3$rating, p = 0.70, list = F,groups = 10)
+train = songs3[split,]
+test = songs3[-split,]
+```
+
+This time, I chose tuned random forest.
+First, find the most value for mtry.
+```{R}
+library(randomForest)
+trControl = trainControl(method = 'cv', number = 5)
+tuneGrid = expand.grid(mtry = 1:ncol(train)-1)
+set.seed(791)
+forest_cv = train(rating~.,
+                  data = train,
+                  method = 'rf',
+                  trControl = trControl,
+                  tuneGrid = tuneGrid,
+                  ntree = 1300)
+forest_cv$best$mtry
+```
+
+Apply the best mtry to the model
+```{R}
+set.seed(791)
+cvforest = randomForest(rating~.,
+                        train,
+                        mtry = forest_cv$bestTune$mtry,
+                        ntree = 1300)
+```
+
+Confirm RMSE of the train data.
+```{R}
+pred_train = predict(cvforest)
+rmse_train_cv_forest = sqrt(mean((pred_train - train$rating)^2));rmse_train_cv_forest
+```
+
+Apply the test data to the model and confirm RMSE on the test data.
+Check if there is no huge discrepancy between train RMSE and test RMSE.
+```{R}
+pred_forest = predict(cvforest, newdata = test)
+rmse_cv_forest = sqrt(mean((pred_forest - test$rating)^2));rmse_cv_forest
+```
+
+I repeated the processes above several times changing the number of "set.seeds" and 
+confirmed there is no significant difference in RMSE depending on the number of set.seeds.
+
+Change the train data from "train" to the whole analysis data (songs3).
+```{R}
+model35 = randomForest(rating~.,
+                       songs3,
+                       mtry = forest_cv$best$mtry,
+                       ntree = 1300)
+```
+
+Apply scoring data to the model and export to csv.
+```{R}
+pred35 = predict(model35,newdata=scoringData3)
+submissionFile27 = data.frame(id = scoringData$id, rating = pred35)
+write.csv(submissionFile35, 'submission35.csv',row.names = F)
+```
+
+~What you did right with the analysis and where you went wrong.~
+By ensuring setting of the number of seeds several times,I was able to avoid a model that only gives good scores when a specific seed is used.
+Also,I checked RMSE on test data by splitting songs data into test and train, I was able to avoid over fitting on the scoring data set.
+Additionally, I was successfully able to use genre data for prediction by cleaning and reshaping.
+On the other hand,there are several points I could not do correctly.
+First, due to the high volume of the number of genres, I didn't include all the genres as dummy variables. In order to get the better prediction score,I should have taken all the genres into consideration.
+Also, after I finished cleaning genre data, I didn't check the relationship/correlation with rating score and each genre dummy variables and among genre dummy variables.As a result, it was most likely that genres I chose for the dummy data were not the optimal combination,and might have had multicollinearity.
+Lastly, when I chose performer names for dummy variables, I did not confirm whether those names exist on scoring data as well. I should have checked if those names are included in both of the data set.
+
+~If you had to do it over, what you would do different?~
+I had one more chance to do it, I would include all the genres as dummy variables first and check VIF value for them. After excluding variables with high VIF, I would use these variables for testing out on different types of models.
+Also regarding performers, I would choose performers which are included in both of the data as dummy variables after checking VIF and correlation.
+
+
+Please see the codes below as unsuccessful submissions.
+
+<Failed submission 1>
+```{R}
+library(xgboost)
+train_x = data.matrix(train[, -15])
+train_y = train[,15]
+
+test_x = data.matrix(train[, -15])
+test_y = train[,15]
+
+#use xgboost
+xgb_train = xgb.DMatrix(data = train_x, label = train_y)
+xgb_test = xgb.DMatrix(data = test_x, label = test_y)
+
+songs3_x = data.matrix(songs3[,-15])
+songs3_y = songs3[,15]
+
+scoringData3_x = data.matrix(scoringData3[,-15])
+scoringData3_y = scoringData3[,15]
+
+xgb_songs3 = xgb.DMatrix(data = songs3_x, label = songs3_y)
+xgb_scoringData3 = xgb.DMatrix(data = scoringData3_x, label = scoringData3_y)
+
+set.seed(891)
+xgbc = xgboost(data = xgb_train, max.depth = 2, nrounds = 2000)
+
+pred_test = predict(xgbc, newdata = xgb_train)
+rmse_test = caret::RMSE(train_y, pred_train)
+rmse_test
+
+pred_test = predict(xgbc, xgb_test)
+rmse_train = caret::RMSE(test_y, pred_test)
+rmse_train
+
+#change the train data set to whole songs data
+xgbc_songs3=xgboost(data = xgb_songs3, max.depth =2, nrounds = 2000)
+
+pred_songs3 = predict(xgbc_songs3, newdata = xgb_songs3)
+rmse_test = caret::RMSE(songs3_y, pred_songs3)
+rmse_test
+
+pred_scoringData3 = predict(xgbc_songs3, xgb_scoringData3)
+rmse_train = caret::RMSE(scoringData3_y, pred_scoringData3)
+rmse_train
+```
+
+<Failed submission 2>
+```{R}
+library(vtreat)
+trt = designTreatmentsZ(dframe = train, varlist = names(train)[-15])
+
+newvars = trt$scoreFrame[trt$scoreFrame$code%in% c('clean','lev'),'varName']
+train_input = prepare(treatmentplan = trt,
+                      dframe = train,
+                      varRestriction = newvars)
+test_input = prepare(treatmentplan = trt,
+                     dframe = test,
+                     varRestriction = newvars)
+
+#use tuned xgboost
+set.seed(215)
+library(xgboost)
+xgboost = xgboost(data = as.matrix(train_input),
+                  label = train$rating,
+                  eta = 0.015,
+                  nrounds = 800,
+                  max_depth = 7,
+                  gamma = 0.25,
+                  early_stopping_rounds = 100)
+
+pred_train = predict(xgboost, 
+                     newdata=as.matrix(train_input))
+rmse_train_xgboost = sqrt(mean((pred_train - train$rating)^2)); rmse_train_xgboost
+
+pred = predict(xgboost,
+               newdata = as.matrix(test_input))
+rmse_xgboost = sqrt(mean((pred - test$rating)^2)); rmse_xgboost
+
+#change the train data set to whole songs data
+songs_input = prepare(treatmentplan = trt,
+                      dframe = songs3,
+                      varRestriction = newvars)
+scoring_input = prepare(treatmentplan = trt,
+                        dframe = scoringData3,
+                        varRestriction = newvars)
+
+xgboost1 = xgboost(data = as.matrix(songs_input),
+                   label = songs3$rating,
+                   eta = 0.015,
+                   nrounds = 800,
+                   max_depth = 7,
+                   gamma = 0.25,
+                   early_stopping_rounds = 100)
+
+pred_songs = predict(xgboost1, 
+                     newdata=as.matrix(songs_input))
+rmse_songs_xgboost = sqrt(mean((pred_songs - songs3$rating)^2)); rmse_songs_xgboost
+
+pred_scoring = predict(xgboost1,
+                       newdata = as.matrix(scoring_input))
+```
+
+<Failed submission 3>
+```{R}
+#random forest without tuning
+set.seed(715)
+trainmodel = randomForest(rating~.,data = train, ntree = 800)
+pred_train = predict(trainmodel)
+rmse_train = sqrt(mean((pred_train - train$rating)^2)):rmse_train
+
+pred_test = predict(trainmodel, newdata = test)
+rmse_test = sqrt(mean((pred_test - test$rating)^2));rmse_test
+
+model24 = randomForest(rating~., data = songs3, ntree = 800)
+pred24 = predict(model24, newdata = scoringData3)
+```
+
+<Failed submission 4>
+```{R}
+#feature selection
+start_mod = lm(rating~1,data=train)
+empty_mod = lm(rating~1,data=train)
+full_mod = lm(rating~.,data=train)
+forwardStepwise = step(start_mod,
+                       scope=list(upper=full_mod,lower=empty_mod),
+                       direction='forward')
+
+model28 =  randomForest(rating ~ ., data = train)
+pred_train = predict(model28)
+rmse28 = sqrt(mean((pred_train-train$rating)^2)); rmse28
+pred28 = predict(model28, data = test)
+rmse28 = sqrt(mean((pred28 - test$rating)^2));rmse28
+```
+
+<Failed submission 5>
+```{R}
+#bag
+library(ipred)
+set.seed(1031) 
+bag = bagging(rating~.,
+              data = train, 
+              nbagg = 3000)
+
+pred_train = predict(bag)
+rmse_train_bag_ipred = sqrt(mean((pred_train - train$rating)^2)); rmse_train_bag_ipred
+pred_train = predict(bag, newdata = test)
+rmse_test_bag_ipred = sqrt(mean((pred_test - test$rating)^2)); rmse_test_bag_ipred
+
+```
+
+I also tried to use deep learning package called H2O,but I was not successfully install the package.
+
+
+
+
+
+
+
