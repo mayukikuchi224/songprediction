@@ -1,3 +1,5 @@
+##This is the personal project from APAN5400 which I took in my first semester at Master of Science in Applied Analytics.
+
 ---
 title: "mk4620_Mayu Kikuchi_PAC Process"
 author: "Mayu"
@@ -489,7 +491,7 @@ By ensuring setting of the number of seeds several times,I was able to avoid a m
 Also,I checked RMSE on test data by splitting songs data into test and train, I was able to avoid over fitting on the scoring data set.
 Additionally, I was successfully able to use genre data for prediction by cleaning and reshaping.
 On the other hand,there are several points I could not do correctly.
-First, due to the high volume of the number of genres, I didn't include all the genres as dummy variables. In order to get the better prediction score,I should have taken all the genres into consideration.
+First, due to the high volume of the number of genres, I didn't include all the genres as dummy variables. In order to get the better prediction score,I should have taken all the genres into consideration by utilizing for loop functions.
 Also, after I finished cleaning genre data, I didn't check the relationship/correlation with rating score and each genre dummy variables and among genre dummy variables.As a result, it was most likely that genres I chose for the dummy data were not the optimal combination,and might have had multicollinearity.
 Lastly, when I chose performer names for dummy variables, I did not confirm whether those names exist on scoring data as well. I should have checked if those names are included in both of the data set.
 
